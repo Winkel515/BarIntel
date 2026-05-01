@@ -2,7 +2,7 @@ import type { ExerciseCategory } from './types';
 
 export const supportedLifts = [
 	{ name: 'Snatch', category: 'classic', core: true, tracking: 'rep' },
-	{ name: 'Clean & Jerk', category: 'classic', core: true, tracking: 'rep' },
+	{ name: 'C&J', category: 'classic', core: true, tracking: 'rep' },
 	{ name: 'Front Squat', category: 'strength', core: true, tracking: 'set' },
 	{ name: 'Back Squat', category: 'strength', core: true, tracking: 'set' },
 	{ name: 'Clean', category: 'variation', core: false, tracking: 'rep' },
@@ -37,13 +37,17 @@ export const repTrackedLiftNames = supportedLifts
 	.map((lift) => lift.name) as SupportedLiftName[];
 
 export const liftRatioPairs = [
-	{ numerator: 'Snatch', denominator: 'Clean & Jerk' },
-	{ numerator: 'Clean & Jerk', denominator: 'Front Squat' },
+	{ numerator: 'Snatch', denominator: 'C&J' },
+	{ numerator: 'C&J', denominator: 'Front Squat' },
 	{ numerator: 'Front Squat', denominator: 'Back Squat' },
 ] as const satisfies ReadonlyArray<{
 	numerator: CoreLiftName;
 	denominator: CoreLiftName;
 }>;
+
+export function normalizeLiftName(name: string) {
+	return name === 'Clean & Jerk' ? 'C&J' : name;
+}
 
 export function isSupportedLiftName(name: string): name is SupportedLiftName {
 	return supportedLifts.some((lift) => lift.name === name);

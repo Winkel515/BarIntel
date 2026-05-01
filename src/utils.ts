@@ -284,6 +284,33 @@ export function getTopSetsByLift(workouts: Workout[]) {
 	return { rows, lifts: supportedLiftNames };
 }
 
+
+export function getEstimatedOneRepMaxes(workouts: Workout[]) {
+	const best = Object.fromEntries(
+		coreLiftNames.map((lift) => [lift, 0]),
+	) as Record<CoreLiftName, number>;
+
+	const getEstimatedOneRepMax = (weight: number, reps: number) =>
+		weight * (1 + reps / 30);
+
+	workouts.forEach((workout) => {
+		getSupportedExercises(workout).forEach((exercise) => {
+			if (!coreLiftNames.includes(exercise.name as CoreLiftName)) return;
+			exercise.sets.forEach((set) => {
+				const madeReps = getMadeRepCount(exercise.name, set);
+				if (madeReps <= 0) return;
+				const estimate = getEstimatedOneRepMax(set.weight, madeReps);
+				const current = best[exercise.name as CoreLiftName] ?? 0;
+				if (estimate > current) {
+					best[exercise.name as CoreLiftName] = Math.round(estimate);
+				}
+			});
+		});
+	});
+
+	return best;
+}
+
 export function getLiftRatios(workouts: Workout[]) {
 	const prs = getPRs(workouts);
 	const ratio = (numerator: number, denominator: number) =>

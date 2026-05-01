@@ -1,5 +1,6 @@
 import type { Exercise, Workout } from '../types';
 import { supabase } from '../lib/supabase';
+import { normalizeLiftName } from '../supportedLifts';
 
 interface WorkoutRow {
 	id: string;
@@ -12,6 +13,13 @@ interface WorkoutRow {
 }
 
 function toWorkout(row: WorkoutRow): Workout {
+	const exercises = Array.isArray(row.exercises)
+		? (row.exercises as Exercise[]).map((exercise) => ({
+				...exercise,
+				name: normalizeLiftName(exercise.name),
+			}))
+		: [];
+
 	return {
 		id: row.id,
 		userId: row.user_id,
@@ -19,9 +27,7 @@ function toWorkout(row: WorkoutRow): Workout {
 		date: row.date,
 		bodyweight: row.bodyweight ?? undefined,
 		notes: row.notes ?? undefined,
-		exercises: Array.isArray(row.exercises)
-			? (row.exercises as Exercise[])
-			: [],
+		exercises,
 	};
 }
 

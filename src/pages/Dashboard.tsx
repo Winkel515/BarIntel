@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import type { Workout } from '../types';
-import { getPRs, getSuccessRate, getTopSet, getTotalVolume } from '../utils';
+import { getPRs, getSuccessRate, getTotalVolume } from '../utils';
 
 interface Props {
 	workouts: Workout[];
@@ -14,13 +15,51 @@ const formatDate = (date: string) =>
 		day: 'numeric',
 	});
 
+const getRecentWorkouts = (workouts: Workout[]) => {
+	const now = new Date();
+	const weekAgo = new Date(now);
+	weekAgo.setDate(now.getDate() - 6);
+
+	return workouts.filter((workout) => {
+		const workoutDate = new Date(workout.date);
+		return workoutDate >= weekAgo && workoutDate <= now;
+	});
+};
+
 export default function Dashboard({ workouts }: Props) {
-	const latestWorkout = useMemo(() => {
-		return workouts.slice().sort((a, b) => (a.date > b.date ? -1 : 1))[0];
-	}, [workouts]);
+	const sortedWorkouts = useMemo(
+		() => workouts.slice().sort((a, b) => (a.date > b.date ? -1 : 1)),
+		[workouts],
+	);
+	const latestWorkout = sortedWorkouts[0];
+	const bodyweightEntries = useMemo(
+		() =>
+			sortedWorkouts.filter(
+				(workout) => workout.bodyweight !== undefined,
+			),
+		[sortedWorkouts],
+	);
+	const latestBodyweight = bodyweightEntries[0]?.bodyweight;
+	const previousBodyweight = bodyweightEntries[1]?.bodyweight;
+	const bodyweightDelta =
+		latestBodyweight !== undefined && previousBodyweight !== undefined
+			? Math.round((latestBodyweight - previousBodyweight) * 10) / 10
+			: null;
+	const recentWorkouts = useMemo(() => getRecentWorkouts(workouts), [workouts]);
 
 	const prs = useMemo(() => getPRs(workouts), [workouts]);
-	const successRate = useMemo(() => getSuccessRate(workouts), [workouts]);
+	const recentSuccessRate = useMemo(
+		() => getSuccessRate(recentWorkouts),
+		[recentWorkouts],
+	);
+	const recentVolume = useMemo(
+		() =>
+			recentWorkouts.reduce(
+				(total, workout) => total + getTotalVolume(workout),
+				0,
+			),
+		[recentWorkouts],
+	);
 
 	return (
 		<main className="space-y-6 px-4 pb-[calc(10rem+env(safe-area-inset-bottom))] pt-6 sm:pb-16 sm:px-6">
@@ -43,69 +82,71 @@ export default function Dashboard({ workouts }: Props) {
 				</div>
 			</section>
 
-			<section className="grid gap-4 sm:grid-cols-2">
-				<article className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
-					<p className="text-sm uppercase tracking-[0.24em] text-muted">
-						Last workout
+			<section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+				<div className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
+					<p className="text-sm text-muted">7-day volume</p>
+					<p className="mt-2 text-2xl font-semibold text-white">
+						{recentVolume} kg
 					</p>
-					{latestWorkout ? (
-						<div className="mt-4 space-y-3">
-							<div className="flex items-center justify-between gap-3">
-								<div>
-									<p className="text-sm text-muted">
-										{formatDate(latestWorkout.date)}
-									</p>
-									<h2 className="mt-1 text-xl font-semibold text-white">
-										{latestWorkout.exercises.length} exercises
-									</h2>
-								</div>
-								<span className="rounded-full bg-accent/10 px-3 py-1 text-sm text-accent">
-									{latestWorkout.bodyweight
-										? `${latestWorkout.bodyweight}kg`
-										: 'No BW'}
-								</span>
-							</div>
-							<div className="rounded-3xl bg-slate-950/80 p-4 text-sm text-slate-300">
-								<p className="font-medium text-white">Top set</p>
-								{getTopSet(latestWorkout) ? (
-									<p className="mt-2 text-base leading-6">
-										{getTopSet(latestWorkout)?.exercise}{' '}
-										{getTopSet(latestWorkout)?.set.weight}kg x{' '}
-										{getTopSet(latestWorkout)?.set.reps}
-									</p>
-								) : (
-									<p className="mt-2 text-sm text-muted">
-										Add a set in the logger to track progress.
-									</p>
-								)}
-							</div>
-						</div>
-					) : (
-						<p className="mt-3 text-sm text-muted">
-							No workouts yet. Create your first session in Logger.
+				</div>
+				<div className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
+					<p className="text-sm text-muted">Recent success</p>
+					<p className="mt-2 text-2xl font-semibold text-white">
+						{recentSuccessRate}%
+					</p>
+				</div>
+				<div className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
+					<p className="text-sm text-muted">Sessions this week</p>
+					<p className="mt-2 text-2xl font-semibold text-white">
+						{recentWorkouts.length}
+					</p>
+				</div>
+				<div className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
+					<p className="text-sm text-muted">Latest bodyweight</p>
+					<p className="mt-2 text-2xl font-semibold text-white">
+						{latestBodyweight !== undefined ? `${latestBodyweight} kg` : 'None'}
+					</p>
+					{bodyweightDelta !== null ? (
+						<p className="mt-1 text-sm text-slate-400">
+							{bodyweightDelta > 0 ? '+' : ''}
+							{bodyweightDelta} kg from previous
 						</p>
-					)}
-				</article>
+					) : null}
+				</div>
+			</section>
 
-				<article className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
-					<p className="text-sm uppercase tracking-[0.24em] text-muted">
-						Stats
-					</p>
-					<div className="mt-4 grid gap-3">
-						<div className="rounded-3xl bg-slate-950/80 p-4">
-							<p className="text-sm text-muted">7-day volume</p>
-							<p className="mt-2 text-2xl font-semibold text-white">
-								{latestWorkout ? `${getTotalVolume(latestWorkout)} kg` : '0 kg'}
+			<section className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<p className="text-sm uppercase tracking-[0.24em] text-muted">
+							Latest session
+						</p>
+						{latestWorkout ? (
+							<>
+								<h2 className="mt-2 text-xl font-semibold text-white">
+									{latestWorkout.name || 'Workout'}
+								</h2>
+								<p className="mt-2 text-sm text-slate-400">
+									{formatDate(latestWorkout.date)} ·{' '}
+									{latestWorkout.exercises.length} exercises ·{' '}
+									{getTotalVolume(latestWorkout)} kg
+								</p>
+							</>
+						) : (
+							<p className="mt-3 text-sm text-muted">
+								No workouts yet. Create your first session in Logger.
 							</p>
-						</div>
-						<div className="rounded-3xl bg-slate-950/80 p-4">
-							<p className="text-sm text-muted">Success rate</p>
-							<p className="mt-2 text-2xl font-semibold text-white">
-								{successRate}%
-							</p>
-						</div>
+						)}
 					</div>
-				</article>
+					{latestWorkout ? (
+						<Link
+							to={`/history/${latestWorkout.id}`}
+							className="inline-flex items-center justify-center rounded-3xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-accentSoft"
+						>
+							View details
+						</Link>
+					) : null}
+				</div>
 			</section>
 
 			<section className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
