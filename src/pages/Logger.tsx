@@ -23,15 +23,7 @@ interface Props {
 }
 
 const today = new Date().toISOString().slice(0, 10);
-
-const formatDateForDefault = (dateStr: string) => {
-	const date = new Date(dateStr + 'T00:00:00Z');
-	return date.toLocaleDateString('en-US', {
-		month: 'long',
-		day: 'numeric',
-		year: 'numeric',
-	});
-};
+const DEFAULT_WORKOUT_NAME = 'Workout';
 
 const DRAFT_STORAGE_KEY = 'barintel_logger_draft';
 
@@ -46,7 +38,7 @@ interface DraftState {
 
 const defaultDraftState = (): DraftState => ({
 	date: today,
-	name: `Workout — ${formatDateForDefault(today)}`,
+	name: '',
 	bodyweight: '',
 	notes: '',
 	workoutExercises: [],
@@ -258,7 +250,7 @@ export default function Logger({ onSave }: Props) {
 		try {
 			await onSave({
 				id: crypto.randomUUID(),
-				name: name.trim() || undefined,
+				name: name.trim() || DEFAULT_WORKOUT_NAME,
 				date,
 				bodyweight: bodyweight ? Number(bodyweight) : undefined,
 				notes: notes.trim() || undefined,
@@ -268,7 +260,7 @@ export default function Logger({ onSave }: Props) {
 			localStorage.removeItem(DRAFT_STORAGE_KEY);
 			// Reset form
 			setDate(today);
-			setName(`Workout — ${formatDateForDefault(today)}`);
+			setName('');
 			setBodyweight('');
 			setNotes('');
 			setWorkoutExercises([]);
@@ -295,7 +287,7 @@ export default function Logger({ onSave }: Props) {
 								type="text"
 								value={name}
 								onChange={(event) => setName(event.target.value)}
-								placeholder={`Workout — ${formatDateForDefault(date)}`}
+								placeholder={DEFAULT_WORKOUT_NAME}
 								aria-label="Workout name"
 								className="-mx-1 block w-full min-w-0 rounded-lg bg-transparent px-1 text-3xl font-semibold text-white outline-none transition placeholder:text-slate-500 hover:bg-white/5 focus:bg-white/5"
 							/>
