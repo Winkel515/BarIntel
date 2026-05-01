@@ -3,6 +3,22 @@ import type { User } from '@supabase/supabase-js';
 import { AuthContext, type AuthContextValue } from './auth-context';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 
+const isLocalOrPrivateHost = (hostname: string) =>
+	hostname === 'localhost' ||
+	hostname === '127.0.0.1' ||
+	hostname === '[::1]' ||
+	hostname.startsWith('192.168.') ||
+	hostname.startsWith('10.') ||
+	/^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
+
+const getAuthRedirectUrl = () => {
+	if (import.meta.env.DEV || isLocalOrPrivateHost(window.location.hostname)) {
+		return window.location.origin;
+	}
+
+	return import.meta.env.VITE_APP_URL || window.location.origin;
+};
+
 export default function AuthProvider({ children }: { children: ReactNode }) {
 	const [user, setUser] = useState<User | null>(null);
 	const [loading, setLoading] = useState(isSupabaseConfigured);
@@ -50,13 +66,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 			signInWithGoogle: async () => {
 				if (!supabase) return;
 
-				const redirectTo =
-					import.meta.env.VITE_APP_URL || window.location.origin;
-
 				const { error } = await supabase.auth.signInWithOAuth({
 					provider: 'google',
 					options: {
-						redirectTo,
+						redirectTo: getAuthRedirectUrl(),
 					},
 				});
 

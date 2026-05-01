@@ -290,8 +290,15 @@ export default function Logger({ onSave }: Props) {
 						<p className="text-sm uppercase tracking-[0.24em] text-muted">
 							Workout Logger
 						</p>
-						<h1 className="mt-2 text-3xl font-semibold text-white">
-							Fast workout capture
+						<h1 className="mt-2">
+							<input
+								type="text"
+								value={name}
+								onChange={(event) => setName(event.target.value)}
+								placeholder={`Workout — ${formatDateForDefault(date)}`}
+								aria-label="Workout name"
+								className="-mx-1 block w-full min-w-0 rounded-lg bg-transparent px-1 text-3xl font-semibold text-white outline-none transition placeholder:text-slate-500 hover:bg-white/5 focus:bg-white/5"
+							/>
 						</h1>
 					</div>
 					<button
@@ -310,16 +317,6 @@ export default function Logger({ onSave }: Props) {
 				) : null}
 
 				<div className="mt-6 space-y-4">
-					<label className="block min-w-0 space-y-2 text-sm text-slate-300">
-						Workout name
-						<input
-							type="text"
-							value={name}
-							onChange={(event) => setName(event.target.value)}
-							placeholder={`Workout — ${formatDateForDefault(date)}`}
-							className="block w-full min-w-0 rounded-3xl border border-slate-700 bg-slate-950/90 px-4 py-3 text-white outline-none focus:border-accent"
-						/>
-					</label>
 					<div className="grid min-w-0 gap-4 sm:grid-cols-3">
 						<label className="block min-w-0 space-y-2 text-sm text-slate-300">
 							Date
