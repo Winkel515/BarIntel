@@ -4,6 +4,8 @@ import { getPRs, getSuccessRate, getTopSet, getTotalVolume } from '../utils';
 
 interface Props {
 	workouts: Workout[];
+	isLoading?: boolean;
+	error?: string;
 }
 
 const formatDate = (date: string) =>
