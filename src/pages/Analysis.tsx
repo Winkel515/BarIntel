@@ -13,6 +13,7 @@ import type { Workout } from '../types';
 import {
 	getDailySuccess,
 	getLiftChartColor,
+	getEstimatedOneRepMaxes,
 	getLiftRatios,
 	getPRs,
 	getTopSetsByLift,
@@ -166,6 +167,7 @@ export default function Analysis({ workouts }: Props) {
 	const successSeries = useMemo(() => getDailySuccess(workouts), [workouts]);
 	const topLiftData = useMemo(() => getTopSetsByLift(workouts), [workouts]);
 	const prs = useMemo(() => getPRs(workouts), [workouts]);
+	const estimatedOneRepMaxes = useMemo(() => getEstimatedOneRepMaxes(workouts), [workouts]);
 	const ratios = useMemo(() => getLiftRatios(workouts), [workouts]);
 	const hasPRs = useMemo(
 		() => Object.values(prs).some((weight) => weight > 0),
@@ -226,6 +228,25 @@ export default function Analysis({ workouts }: Props) {
 						</div>
 					</div>
 				</div>
+
+					<div className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
+						<p className="text-sm uppercase tracking-[0.24em] text-muted">
+							Estimated 1RM
+						</p>
+						<div className="mt-4 grid gap-3 sm:grid-cols-2">
+							{coreLiftNames.map((lift) => (
+								<div key={lift} className="rounded-3xl bg-slate-950/80 p-4">
+									<p className="text-sm text-muted">{lift}</p>
+									<p className="mt-2 text-xl font-semibold text-white">
+										{estimatedOneRepMaxes[lift] ? `${estimatedOneRepMaxes[lift]} kg` : '-'}
+									</p>
+								</div>
+							))}
+						</div>
+						<p className="mt-4 text-xs text-slate-400">
+							Calculated with Epley formula from your best successful set (weight × (1 + reps/30)).
+						</p>
+					</div>
 
 				<div className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
 					<div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
