@@ -44,35 +44,58 @@ interface DraftState {
 	setDrafts: Record<string, typeof defaultSetDraft>;
 }
 
+const defaultDraftState = (): DraftState => ({
+	date: today,
+	name: `Workout — ${formatDateForDefault(today)}`,
+	bodyweight: '',
+	notes: '',
+	workoutExercises: [],
+	setDrafts: {},
+});
+
+const getInitialDraftState = (): DraftState => {
+	const fallback = defaultDraftState();
+	const stored = localStorage.getItem(DRAFT_STORAGE_KEY);
+	if (!stored) return fallback;
+
+	try {
+		const draft = JSON.parse(stored) as Partial<DraftState>;
+
+		return {
+			date: typeof draft.date === 'string' ? draft.date : fallback.date,
+			name: typeof draft.name === 'string' ? draft.name : fallback.name,
+			bodyweight:
+				typeof draft.bodyweight === 'string'
+					? draft.bodyweight
+					: fallback.bodyweight,
+			notes: typeof draft.notes === 'string' ? draft.notes : fallback.notes,
+			workoutExercises: Array.isArray(draft.workoutExercises)
+				? draft.workoutExercises
+				: fallback.workoutExercises,
+			setDrafts:
+				draft.setDrafts && typeof draft.setDrafts === 'object'
+					? draft.setDrafts
+					: fallback.setDrafts,
+		};
+	} catch {
+		return fallback;
+	}
+};
+
 export default function Logger({ onSave }: Props) {
-	const [date, setDate] = useState(today);
-	const [name, setName] = useState(`Workout — ${formatDateForDefault(today)}`);
-	const [bodyweight, setBodyweight] = useState('');
-	const [notes, setNotes] = useState('');
-	const [workoutExercises, setWorkoutExercises] = useState<Exercise[]>([]);
+	const [initialDraft] = useState(getInitialDraftState);
+	const [date, setDate] = useState(initialDraft.date);
+	const [name, setName] = useState(initialDraft.name);
+	const [bodyweight, setBodyweight] = useState(initialDraft.bodyweight);
+	const [notes, setNotes] = useState(initialDraft.notes);
+	const [workoutExercises, setWorkoutExercises] = useState<Exercise[]>(
+		initialDraft.workoutExercises,
+	);
 	const [setDrafts, setSetDrafts] = useState<
 		Record<string, typeof defaultSetDraft>
-	>({});
+	>(initialDraft.setDrafts);
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState('');
-
-	// Load draft from localStorage on mount
-	useEffect(() => {
-		const stored = localStorage.getItem(DRAFT_STORAGE_KEY);
-		if (stored) {
-			try {
-				const draft = JSON.parse(stored) as DraftState;
-				setDate(draft.date);
-				setName(draft.name);
-				setBodyweight(draft.bodyweight);
-				setNotes(draft.notes);
-				setWorkoutExercises(draft.workoutExercises);
-				setSetDrafts(draft.setDrafts);
-			} catch {
-				// Ignore parse errors, start fresh
-			}
-		}
-	}, []);
 
 	// Save draft to localStorage whenever it changes
 	useEffect(() => {
@@ -260,7 +283,7 @@ export default function Logger({ onSave }: Props) {
 	};
 
 	return (
-		<main className="space-y-6 px-4 pb-16 pt-6 sm:px-6">
+		<main className="space-y-6 px-4 pb-28 pt-6 sm:pb-16 sm:px-6">
 			<section className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div>
@@ -287,27 +310,27 @@ export default function Logger({ onSave }: Props) {
 				) : null}
 
 				<div className="mt-6 space-y-4">
-					<label className="space-y-2 text-sm text-slate-300">
+					<label className="block min-w-0 space-y-2 text-sm text-slate-300">
 						Workout name
 						<input
 							type="text"
 							value={name}
 							onChange={(event) => setName(event.target.value)}
 							placeholder={`Workout — ${formatDateForDefault(date)}`}
-							className="w-full rounded-3xl border border-slate-700 bg-slate-950/90 px-4 py-3 text-white outline-none focus:border-accent"
+							className="block w-full min-w-0 rounded-3xl border border-slate-700 bg-slate-950/90 px-4 py-3 text-white outline-none focus:border-accent"
 						/>
 					</label>
-					<div className="grid gap-4 sm:grid-cols-3">
-						<label className="space-y-2 text-sm text-slate-300">
+					<div className="grid min-w-0 gap-4 sm:grid-cols-3">
+						<label className="block min-w-0 space-y-2 text-sm text-slate-300">
 							Date
 							<input
 								type="date"
 								value={date}
 								onChange={(event) => setDate(event.target.value)}
-								className="w-full rounded-3xl border border-slate-700 bg-slate-950/90 px-4 py-3 text-white outline-none focus:border-accent"
+								className="block w-full min-w-0 max-w-full appearance-none rounded-3xl border border-slate-700 bg-slate-950/90 px-4 py-3 text-white outline-none focus:border-accent"
 							/>
 						</label>
-						<label className="space-y-2 text-sm text-slate-300">
+						<label className="block min-w-0 space-y-2 text-sm text-slate-300">
 							Bodyweight
 							<input
 								type="number"
@@ -315,17 +338,17 @@ export default function Logger({ onSave }: Props) {
 								value={bodyweight}
 								onChange={(event) => setBodyweight(event.target.value)}
 								placeholder="kg"
-								className="w-full rounded-3xl border border-slate-700 bg-slate-950/90 px-4 py-3 text-white outline-none focus:border-accent"
+								className="block w-full min-w-0 rounded-3xl border border-slate-700 bg-slate-950/90 px-4 py-3 text-white outline-none focus:border-accent"
 							/>
 						</label>
-						<label className="space-y-2 text-sm text-slate-300">
+						<label className="block min-w-0 space-y-2 text-sm text-slate-300">
 							Notes
 							<input
 								type="text"
 								value={notes}
 								onChange={(event) => setNotes(event.target.value)}
 								placeholder="Optional session note"
-								className="w-full rounded-3xl border border-slate-700 bg-slate-950/90 px-4 py-3 text-white outline-none focus:border-accent"
+								className="block w-full min-w-0 rounded-3xl border border-slate-700 bg-slate-950/90 px-4 py-3 text-white outline-none focus:border-accent"
 							/>
 						</label>
 					</div>

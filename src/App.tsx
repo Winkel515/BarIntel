@@ -16,7 +16,6 @@ import Dashboard from './pages/Dashboard';
 import History from './pages/History';
 import Logger from './pages/Logger';
 import Login from './pages/Login';
-import Profile from './pages/Profile';
 import WorkoutDetail from './pages/WorkoutDetail';
 
 const navItems = [
@@ -24,11 +23,10 @@ const navItems = [
 	{ label: 'Logger', path: '/logger' },
 	{ label: 'Analysis', path: '/analysis' },
 	{ label: 'History', path: '/history' },
-	{ label: 'Profile', path: '/profile' },
 ];
 
 function Layout() {
-	const { user } = useAuth();
+	const { user, signOut } = useAuth();
 
 	return (
 		<div className="min-h-screen bg-bg text-text">
@@ -63,12 +61,19 @@ function Layout() {
 					<p className="hidden max-w-[180px] truncate text-right text-sm text-slate-400 lg:block">
 						{user?.email}
 					</p>
+					<button
+						type="button"
+						onClick={() => void signOut()}
+						className="rounded-3xl bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+					>
+						Logout
+					</button>
 				</div>
 			</header>
 
 			<Outlet />
 
-			<nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-slate-900/80 bg-slate-950/95 p-3 backdrop-blur-xl sm:hidden">
+			<nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-slate-900/80 bg-slate-950/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:hidden">
 				<div className="mx-auto flex max-w-6xl items-center justify-between gap-2">
 					{navItems.map((item) => (
 						<NavLink
@@ -184,7 +189,6 @@ function AppRoutes() {
 						path="history/:id"
 						element={<WorkoutDetail workouts={workouts} />}
 					/>
-					<Route path="profile" element={<Profile />} />
 					<Route path="*" element={<Navigate to="/" replace />} />
 				</Route>
 			</Route>

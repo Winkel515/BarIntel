@@ -38,7 +38,7 @@ export default function Analysis({ workouts }: Props) {
 	);
 
 	return (
-		<main className="space-y-6 px-4 pb-16 pt-6 sm:px-6">
+		<main className="space-y-6 px-4 pb-28 pt-6 sm:pb-16 sm:px-6">
 			<section className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
 				<p className="text-sm uppercase tracking-[0.24em] text-muted">
 					Analysis
