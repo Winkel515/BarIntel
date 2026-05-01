@@ -1,7 +1,14 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import SessionQualityHeatmap from '../components/SessionQualityHeatmap';
 import type { Workout } from '../types';
-import { getPRs, getSuccessRate, getTotalVolume } from '../utils';
+import {
+	getDailySessionQualityData,
+	getPRs,
+	getSuccessRate,
+	getTotalVolume,
+	getWeeklyConsistencySummary,
+} from '../utils';
 
 interface Props {
 	workouts: Workout[];
@@ -60,6 +67,14 @@ export default function Dashboard({ workouts }: Props) {
 			),
 		[recentWorkouts],
 	);
+	const sessionQualityData = useMemo(
+		() => getDailySessionQualityData(workouts),
+		[workouts],
+	);
+	const consistencySummary = useMemo(
+		() => getWeeklyConsistencySummary(sessionQualityData),
+		[sessionQualityData],
+	);
 
 	return (
 		<main className="space-y-6 px-4 pb-[calc(10rem+env(safe-area-inset-bottom))] pt-6 sm:pb-16 sm:px-6">
@@ -112,6 +127,24 @@ export default function Dashboard({ workouts }: Props) {
 							{bodyweightDelta} kg from previous
 						</p>
 					) : null}
+				</div>
+			</section>
+
+			<section className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
+				<div className="space-y-4">
+					<div>
+						<p className="text-sm uppercase tracking-[0.24em] text-muted">
+							Training consistency
+						</p>
+						<p className="mt-3 text-sm text-slate-400">
+							Avg quality: {consistencySummary.avgQualityThisWeek}
+						</p>
+					</div>
+					<div className="w-full">
+						<SessionQualityHeatmap
+							dailyData={sessionQualityData}
+						/>
+					</div>
 				</div>
 			</section>
 

@@ -28,6 +28,23 @@ const chartColors = [
 type SupportedExercise = Exercise & { name: SupportedLiftName };
 type ScoredAttempt = { result: SetResult };
 
+export interface DailySessionQuality {
+	date: string;
+	score: number;
+	hitRate: number;
+	avgIntensity: number;
+	totalReps: number;
+	successfulReps: number;
+	lifts: SupportedLiftName[];
+}
+
+export interface WeeklyConsistencySummary {
+	trainedDaysThisWeek: number;
+	plannedDaysThisWeek: number;
+	consistencyPercent: number;
+	avgQualityThisWeek: number;
+}
+
 export function createAttempts(reps: number) {
 	return Array.from({ length: Math.max(1, reps) }, (_, index) => ({
 		rep_number: index + 1,
@@ -89,10 +106,50 @@ function getScoredAttempts(
 	}));
 }
 
+function getScoredReps(exerciseName: string, set: ExerciseSet): ScoredAttempt[] {
+	if (!usesRepTracking(exerciseName)) {
+		return Array.from({ length: Math.max(1, set.reps) }, () => ({
+			result: 'made' as SetResult,
+		}));
+	}
+
+	return normalizeAttempts(set).map((attempt) => ({
+		result: attempt.result as SetResult,
+	}));
+}
+
 function getSupportedExercises(workout: Workout): SupportedExercise[] {
 	return workout.exercises.filter((exercise): exercise is SupportedExercise =>
 		isSupportedLiftName(exercise.name),
 	);
+}
+
+function clampScore(score: number) {
+	return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function getBestSuccessfulWeights(workouts: Workout[]) {
+	const best = Object.fromEntries(
+		supportedLiftNames.map((lift) => [lift, 0]),
+	) as Record<SupportedLiftName, number>;
+
+	workouts.forEach((workout) => {
+		getSupportedExercises(workout).forEach((exercise) => {
+			exercise.sets.forEach((set) => {
+				if (getMadeRepCount(exercise.name, set) <= 0) return;
+				best[exercise.name] = Math.max(best[exercise.name], set.weight);
+			});
+		});
+	});
+
+	return best;
+}
+
+function getLocalDateKey(date: Date) {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
 }
 
 function getLiftSets(
@@ -110,6 +167,105 @@ function getLiftSets(
 				})),
 			),
 	);
+}
+
+export function getDailySessionQualityData(
+	sessionsOrReps: Workout[],
+): DailySessionQuality[] {
+	const bestWeights = getBestSuccessfulWeights(sessionsOrReps);
+	const daily: Record<
+		string,
+		{
+			intensityTotal: number;
+			totalReps: number;
+			successfulReps: number;
+			lifts: Set<SupportedLiftName>;
+		}
+	> = {};
+
+	sessionsOrReps.forEach((workout) => {
+		getSupportedExercises(workout).forEach((exercise) => {
+			const currentBest = bestWeights[exercise.name];
+			if (!currentBest) return;
+
+			exercise.sets.forEach((set) => {
+				const attempts = getScoredReps(exercise.name, set);
+				if (!attempts.length) return;
+
+				daily[workout.date] ??= {
+					intensityTotal: 0,
+					totalReps: 0,
+					successfulReps: 0,
+					lifts: new Set<SupportedLiftName>(),
+				};
+
+				const day = daily[workout.date];
+				day.lifts.add(exercise.name);
+
+				attempts.forEach((attempt) => {
+					day.totalReps += 1;
+					day.intensityTotal += set.weight / currentBest;
+					if (attempt.result === 'made') {
+						day.successfulReps += 1;
+					}
+				});
+			});
+		});
+	});
+
+	return Object.entries(daily)
+		.map(([date, day]) => {
+			const hitRate = day.totalReps
+				? day.successfulReps / day.totalReps
+				: 0;
+			const avgIntensity = day.totalReps
+				? day.intensityTotal / day.totalReps
+				: 0;
+			const score = clampScore((hitRate * 0.6 + avgIntensity * 0.4) * 100);
+
+			return {
+				date,
+				score,
+				hitRate,
+				avgIntensity,
+				totalReps: day.totalReps,
+				successfulReps: day.successfulReps,
+				lifts: Array.from(day.lifts).sort(),
+			};
+		})
+		.sort((a, b) => (a.date > b.date ? 1 : -1));
+}
+
+export function getWeeklyConsistencySummary(
+	dailyData: DailySessionQuality[],
+	plannedDaysThisWeek = 5,
+): WeeklyConsistencySummary {
+	const now = new Date();
+	const weekAgo = new Date(now);
+	weekAgo.setDate(now.getDate() - 6);
+
+	const weekStartKey = getLocalDateKey(weekAgo);
+	const todayKey = getLocalDateKey(now);
+	const thisWeek = dailyData.filter(
+		(day) => day.date >= weekStartKey && day.date <= todayKey,
+	);
+	const trainedDaysThisWeek = thisWeek.length;
+	const consistencyPercent = plannedDaysThisWeek
+		? Math.round((trainedDaysThisWeek / plannedDaysThisWeek) * 100)
+		: 0;
+	const avgQualityThisWeek = thisWeek.length
+		? Math.round(
+				thisWeek.reduce((total, day) => total + day.score, 0) /
+					thisWeek.length,
+			)
+		: 0;
+
+	return {
+		trainedDaysThisWeek,
+		plannedDaysThisWeek,
+		consistencyPercent: Math.min(100, consistencyPercent),
+		avgQualityThisWeek,
+	};
 }
 
 export function getTopSet(workout: Workout) {
