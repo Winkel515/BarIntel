@@ -1,9 +1,4 @@
-import {
-	useEffect,
-	useMemo,
-	useState,
-	type ReactNode,
-} from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { AuthContext, type AuthContextValue } from './auth-context';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
@@ -19,11 +14,16 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
 		let active = true;
 
-		supabase.auth.getSession().then(({ data }) => {
+		const initAuth = async () => {
+			const client = supabase;
+			if (!client) return;
+			const { data } = await client.auth.getSession();
 			if (!active) return;
 			setUser(data.session?.user ?? null);
 			setLoading(false);
-		});
+		};
+
+		initAuth();
 
 		const {
 			data: { subscription },
