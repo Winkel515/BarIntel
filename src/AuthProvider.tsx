@@ -8,17 +8,20 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 	const [loading, setLoading] = useState(isSupabaseConfigured);
 
 	useEffect(() => {
-		if (!supabase) {
-			return;
-		}
+		if (!supabase) return;
 
+		const client = supabase; // ✅ fixes TS null issue
 		let active = true;
 
 		const initAuth = async () => {
-			const client = supabase;
-			if (!client) return;
-			const { data } = await client.auth.getSession();
+			const { data, error } = await client.auth.getSession();
+
 			if (!active) return;
+
+			if (error) {
+				console.error('Failed to get auth session:', error);
+			}
+
 			setUser(data.session?.user ?? null);
 			setLoading(false);
 		};
@@ -27,7 +30,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
 		const {
 			data: { subscription },
-		} = supabase.auth.onAuthStateChange((_event, session) => {
+		} = client.auth.onAuthStateChange((_event, session) => {
 			setUser(session?.user ?? null);
 			setLoading(false);
 		});
@@ -43,23 +46,31 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 			user,
 			loading,
 			isConfigured: isSupabaseConfigured,
+
 			signInWithGoogle: async () => {
 				if (!supabase) return;
+
+				const redirectTo =
+					import.meta.env.VITE_APP_URL || window.location.origin;
+
 				const { error } = await supabase.auth.signInWithOAuth({
 					provider: 'google',
 					options: {
-						redirectTo: window.location.origin,
+						redirectTo,
 					},
 				});
+
 				if (error) throw error;
 			},
+
 			signOut: async () => {
 				if (!supabase) return;
+
 				const { error } = await supabase.auth.signOut();
 				if (error) throw error;
 			},
 		}),
-		[loading, user],
+		[user, loading],
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
