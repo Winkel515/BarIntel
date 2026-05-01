@@ -181,7 +181,7 @@ function AppRoutes() {
 					/>
 					<Route
 						path="logger"
-						element={<Logger onSave={handleSaveWorkout} />}
+						element={<Logger workouts={workouts} onSave={handleSaveWorkout} />}
 					/>
 					<Route path="analysis" element={<Analysis workouts={workouts} />} />
 					<Route path="history" element={<History workouts={workouts} />} />

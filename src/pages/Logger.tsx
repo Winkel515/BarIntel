@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Exercise, Workout } from '../types';
 import {
 	getSupportedLift,
+	normalizeLiftName,
 	supportedLifts,
 	usesRepTracking,
 	type SupportedLiftName,
@@ -19,6 +20,7 @@ const defaultSetDraft = {
 };
 
 interface Props {
+	workouts: Workout[];
 	onSave: (workout: Workout) => Promise<void>;
 }
 
@@ -62,7 +64,10 @@ const getInitialDraftState = (): DraftState => {
 					: fallback.bodyweight,
 			notes: typeof draft.notes === 'string' ? draft.notes : fallback.notes,
 			workoutExercises: Array.isArray(draft.workoutExercises)
-				? draft.workoutExercises
+				? draft.workoutExercises.map((exercise) => ({
+						...exercise,
+						name: normalizeLiftName(exercise.name),
+					}))
 				: fallback.workoutExercises,
 			setDrafts:
 				draft.setDrafts && typeof draft.setDrafts === 'object'
@@ -74,7 +79,13 @@ const getInitialDraftState = (): DraftState => {
 	}
 };
 
-export default function Logger({ onSave }: Props) {
+const getLatestBodyweight = (workouts: Workout[]) =>
+	workouts
+		.slice()
+		.sort((a, b) => (a.date > b.date ? -1 : 1))
+		.find((workout) => workout.bodyweight !== undefined)?.bodyweight;
+
+export default function Logger({ workouts, onSave }: Props) {
 	const [initialDraft] = useState(getInitialDraftState);
 	const [date, setDate] = useState(initialDraft.date);
 	const [name, setName] = useState(initialDraft.name);
@@ -88,6 +99,20 @@ export default function Logger({ onSave }: Props) {
 	>(initialDraft.setDrafts);
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState('');
+	const hasDefaultedBodyweight = useRef(Boolean(initialDraft.bodyweight));
+	const latestBodyweight = useMemo(
+		() => getLatestBodyweight(workouts),
+		[workouts],
+	);
+
+	useEffect(() => {
+		if (hasDefaultedBodyweight.current || latestBodyweight === undefined) {
+			return;
+		}
+
+		hasDefaultedBodyweight.current = true;
+		setBodyweight(String(latestBodyweight));
+	}, [latestBodyweight]);
 
 	// Save draft to localStorage whenever it changes
 	useEffect(() => {
@@ -245,6 +270,7 @@ export default function Logger({ onSave }: Props) {
 
 	const saveWorkout = async () => {
 		if (!workoutExercises.length) return;
+		const savedBodyweight = bodyweight ? Number(bodyweight) : undefined;
 		setIsSaving(true);
 		setSaveError('');
 		try {
@@ -252,7 +278,7 @@ export default function Logger({ onSave }: Props) {
 				id: crypto.randomUUID(),
 				name: name.trim() || DEFAULT_WORKOUT_NAME,
 				date,
-				bodyweight: bodyweight ? Number(bodyweight) : undefined,
+				bodyweight: savedBodyweight,
 				notes: notes.trim() || undefined,
 				exercises: workoutExercises,
 			});
@@ -261,7 +287,13 @@ export default function Logger({ onSave }: Props) {
 			// Reset form
 			setDate(today);
 			setName('');
-			setBodyweight('');
+			setBodyweight(
+				savedBodyweight !== undefined
+					? String(savedBodyweight)
+					: latestBodyweight !== undefined
+						? String(latestBodyweight)
+						: '',
+			);
 			setNotes('');
 			setWorkoutExercises([]);
 			setSetDrafts({});
@@ -277,7 +309,7 @@ export default function Logger({ onSave }: Props) {
 	return (
 		<main className="space-y-6 px-4 pb-[calc(10rem+env(safe-area-inset-bottom))] pt-6 sm:pb-16 sm:px-6">
 			<section className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
-				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<div>
 					<div>
 						<p className="text-sm uppercase tracking-[0.24em] text-muted">
 							Workout Logger
@@ -293,14 +325,6 @@ export default function Logger({ onSave }: Props) {
 							/>
 						</h1>
 					</div>
-					<button
-						type="button"
-						onClick={saveWorkout}
-						className="inline-flex items-center justify-center rounded-3xl bg-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-accentSoft disabled:cursor-not-allowed disabled:opacity-40"
-						disabled={!hasExercises || isSaving}
-					>
-						{isSaving ? 'Saving...' : 'Save workout'}
-					</button>
 				</div>
 				{saveError ? (
 					<p className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
@@ -539,7 +563,7 @@ export default function Logger({ onSave }: Props) {
 			</section>
 
 			<section className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
-				<div className="flex items-center justify-between gap-4">
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<div>
 						<p className="text-sm uppercase tracking-[0.24em] text-muted">
 							Session summary
@@ -548,11 +572,21 @@ export default function Logger({ onSave }: Props) {
 							{hasExercises
 								? `${sessionTotal} kg total volume`
 								: 'Add lifts to start logging'}
-						</h2>
+							</h2>
 					</div>
-					<span className="rounded-3xl bg-white/5 px-4 py-3 text-sm text-slate-200">
-						{workoutExercises.length} exercises
-					</span>
+					<div className="flex flex-col gap-3 sm:items-end">
+						<span className="w-fit rounded-3xl bg-white/5 px-4 py-3 text-sm text-slate-200">
+							{workoutExercises.length} exercises
+						</span>
+						<button
+							type="button"
+							onClick={saveWorkout}
+							className="inline-flex w-full items-center justify-center rounded-3xl bg-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-accentSoft disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+							disabled={!hasExercises || isSaving}
+						>
+							{isSaving ? 'Saving...' : 'Save workout'}
+						</button>
+					</div>
 				</div>
 			</section>
 		</main>

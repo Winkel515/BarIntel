@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
 	Line,
 	LineChart,
@@ -18,7 +18,12 @@ import {
 	getTopSetsByLift,
 	getWeeklyVolume,
 } from '../utils';
-import { classicLiftNames, coreLiftNames, supportedLiftNames } from '../supportedLifts';
+import {
+	classicLiftNames,
+	coreLiftNames,
+	supportedLiftNames,
+	type SupportedLiftName,
+} from '../supportedLifts';
 
 interface Props {
 	workouts: Workout[];
@@ -26,7 +31,137 @@ interface Props {
 
 const formatLabel = (value: string) => value.slice(5);
 
+function toggleLiftSelection(
+	selected: SupportedLiftName[],
+	lift: SupportedLiftName,
+	allLifts: readonly SupportedLiftName[],
+) {
+	if (selected.length === allLifts.length) {
+		return [lift];
+	}
+
+	if (selected.includes(lift)) {
+		return selected.filter((item) => item !== lift);
+	}
+
+	return [...selected, lift];
+}
+
+function getFocusLabel(
+	selected: SupportedLiftName[],
+	allLifts: readonly SupportedLiftName[],
+) {
+	if (!selected.length) return 'No lifts';
+	if (selected.length === allLifts.length) return 'All lifts';
+	if (selected.length === 1) return selected[0];
+	return `${selected.length} lifts`;
+}
+
+function LiftFocusMenu({
+	lifts,
+	selected,
+	onChange,
+}: {
+	lifts: readonly SupportedLiftName[];
+	selected: SupportedLiftName[];
+	onChange: (next: SupportedLiftName[]) => void;
+}) {
+	const allSelected = selected.length === lifts.length;
+	const [isOpen, setIsOpen] = useState(false);
+	const menuRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!isOpen) return;
+
+		const handlePointerDown = (event: PointerEvent) => {
+			if (
+				menuRef.current &&
+				!menuRef.current.contains(event.target as Node)
+			) {
+				setIsOpen(false);
+			}
+		};
+
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') {
+				setIsOpen(false);
+			}
+		};
+
+		document.addEventListener('pointerdown', handlePointerDown);
+		document.addEventListener('keydown', handleKeyDown);
+
+		return () => {
+			document.removeEventListener('pointerdown', handlePointerDown);
+			document.removeEventListener('keydown', handleKeyDown);
+		};
+	}, [isOpen]);
+
+	return (
+		<div ref={menuRef} className="relative">
+			<button
+				type="button"
+				onClick={() => setIsOpen((current) => !current)}
+				aria-expanded={isOpen}
+				className="block w-full rounded-3xl border border-slate-700 bg-slate-950/90 px-4 py-3 text-left text-sm font-semibold text-white outline-none transition hover:border-slate-500 focus:border-accent sm:w-56"
+			>
+				{getFocusLabel(selected, lifts)}
+			</button>
+			{isOpen ? (
+				<div className="absolute right-0 z-10 mt-2 grid w-full min-w-56 gap-2 rounded-3xl border border-slate-800 bg-slate-950 p-2 shadow-2xl shadow-black/40">
+					<button
+						type="button"
+						onClick={() => onChange(allSelected ? [] : [...lifts])}
+						className={`flex items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium transition ${
+							allSelected
+								? 'bg-accent text-white'
+								: 'text-slate-300 hover:bg-white/10 hover:text-white'
+						}`}
+					>
+						All lifts
+						<span>{allSelected ? 'On' : ''}</span>
+					</button>
+					{lifts.map((lift) => {
+						const isSelected = selected.includes(lift);
+
+						return (
+							<button
+								key={lift}
+								type="button"
+								onClick={() =>
+									onChange(toggleLiftSelection(selected, lift, lifts))
+								}
+								className={`flex items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium transition ${
+									isSelected
+										? 'bg-accent/20 text-white'
+										: 'text-slate-300 hover:bg-white/10 hover:text-white'
+								}`}
+							>
+								{lift}
+								<span
+									className={`h-2.5 w-2.5 rounded-full ${
+										isSelected ? 'bg-accent' : 'bg-slate-700'
+									}`}
+								/>
+							</button>
+						);
+					})}
+				</div>
+			) : null}
+		</div>
+	);
+}
+
 export default function Analysis({ workouts }: Props) {
+	const [trendLifts, setTrendLifts] = useState<SupportedLiftName[]>([
+		...supportedLiftNames,
+	]);
+	const [volumeLifts, setVolumeLifts] = useState<SupportedLiftName[]>([
+		...supportedLiftNames,
+	]);
+	const [successLifts, setSuccessLifts] = useState<SupportedLiftName[]>([
+		...classicLiftNames,
+	]);
 	const weeklyVolume = useMemo(() => getWeeklyVolume(workouts), [workouts]);
 	const successSeries = useMemo(() => getDailySuccess(workouts), [workouts]);
 	const topLiftData = useMemo(() => getTopSetsByLift(workouts), [workouts]);
@@ -54,9 +189,6 @@ export default function Analysis({ workouts }: Props) {
 						<p className="text-sm uppercase tracking-[0.24em] text-muted">
 							PRs
 						</p>
-						<h2 className="mt-2 text-xl font-semibold text-white">
-							Core lift maxes
-						</h2>
 						{hasPRs ? (
 							<div className="mt-4 grid gap-3 sm:grid-cols-2">
 								{coreLiftNames.map((lift) => (
@@ -79,9 +211,6 @@ export default function Analysis({ workouts }: Props) {
 						<p className="text-sm uppercase tracking-[0.24em] text-muted">
 							Ratios
 						</p>
-						<h2 className="mt-2 text-xl font-semibold text-white">
-							Classic and squat balance
-						</h2>
 						<div className="mt-4 grid gap-3">
 							{ratios.map((ratio) => (
 								<div
@@ -99,15 +228,17 @@ export default function Analysis({ workouts }: Props) {
 				</div>
 
 				<div className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
-					<div className="mb-4 flex items-center justify-between gap-4">
+					<div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 						<div>
 							<p className="text-sm uppercase tracking-[0.24em] text-muted">
 								Top set trend
 							</p>
-							<h2 className="mt-2 text-xl font-semibold text-white">
-								Lift top load over time
-							</h2>
 						</div>
+						<LiftFocusMenu
+							lifts={supportedLiftNames}
+							selected={trendLifts}
+							onChange={setTrendLifts}
+						/>
 					</div>
 					{topLiftData.rows.length ? (
 						<div className="h-72">
@@ -128,7 +259,9 @@ export default function Analysis({ workouts }: Props) {
 										labelFormatter={(value) => `Date: ${value}`}
 									/>
 									<Legend wrapperStyle={{ color: '#94a3b8' }} />
-									{topLiftData.lifts.map((lift, index) => (
+									{topLiftData.lifts
+										.filter((lift) => trendLifts.includes(lift))
+										.map((lift, index) => (
 										<Line
 											key={lift}
 											type="monotone"
@@ -150,12 +283,16 @@ export default function Analysis({ workouts }: Props) {
 
 				<div className="grid gap-6 lg:grid-cols-2">
 					<div className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
-						<p className="text-sm uppercase tracking-[0.24em] text-muted">
-							Volume
-						</p>
-						<h2 className="mt-2 text-xl font-semibold text-white">
-							Weekly volume
-						</h2>
+						<div className="flex flex-col gap-4">
+							<p className="text-sm uppercase tracking-[0.24em] text-muted">
+								Volume
+							</p>
+							<LiftFocusMenu
+								lifts={supportedLiftNames}
+								selected={volumeLifts}
+								onChange={setVolumeLifts}
+							/>
+						</div>
 						<div className="mt-5 h-64">
 							<ResponsiveContainer width="100%" height="100%">
 								<LineChart data={weeklyVolume}>
@@ -173,7 +310,9 @@ export default function Analysis({ workouts }: Props) {
 										}}
 									/>
 									<Legend wrapperStyle={{ color: '#94a3b8' }} />
-									{supportedLiftNames.map((lift, index) => (
+									{supportedLiftNames
+										.filter((lift) => volumeLifts.includes(lift))
+										.map((lift, index) => (
 										<Line
 											key={lift}
 											type="monotone"
@@ -189,12 +328,16 @@ export default function Analysis({ workouts }: Props) {
 					</div>
 
 					<div className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
-						<p className="text-sm uppercase tracking-[0.24em] text-muted">
-							Hit rate
-						</p>
-						<h2 className="mt-2 text-xl font-semibold text-white">
-							Snatch and Clean & Jerk success
-						</h2>
+						<div className="flex flex-col gap-4">
+							<p className="text-sm uppercase tracking-[0.24em] text-muted">
+								Hit rate
+							</p>
+							<LiftFocusMenu
+								lifts={classicLiftNames}
+								selected={successLifts}
+								onChange={setSuccessLifts}
+							/>
+						</div>
 						<div className="mt-5 h-64">
 							<ResponsiveContainer width="100%" height="100%">
 								<LineChart data={successSeries}>
@@ -213,7 +356,9 @@ export default function Analysis({ workouts }: Props) {
 										formatter={(value: number) => `${value}%`}
 									/>
 									<Legend wrapperStyle={{ color: '#94a3b8' }} />
-									{classicLiftNames.map((lift, index) => (
+									{classicLiftNames
+										.filter((lift) => successLifts.includes(lift))
+										.map((lift, index) => (
 										<Line
 											key={lift}
 											type="monotone"
