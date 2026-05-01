@@ -23,7 +23,7 @@ export default function Dashboard({ workouts }: Props) {
 	const successRate = useMemo(() => getSuccessRate(workouts), [workouts]);
 
 	return (
-		<main className="space-y-6 px-4 pb-28 pt-6 sm:pb-16 sm:px-6">
+		<main className="space-y-6 px-4 pb-[calc(10rem+env(safe-area-inset-bottom))] pt-6 sm:pb-16 sm:px-6">
 			<section className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/20">
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 					<div>

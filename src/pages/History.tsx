@@ -18,7 +18,7 @@ export default function History({ workouts }: Props) {
 	const sorted = workouts.slice().sort((a, b) => (a.date > b.date ? -1 : 1));
 
 	return (
-		<main className="space-y-6 px-4 pb-28 pt-6 sm:pb-16 sm:px-6">
+		<main className="space-y-6 px-4 pb-[calc(10rem+env(safe-area-inset-bottom))] pt-6 sm:pb-16 sm:px-6">
 			<section className="rounded-3xl border border-slate-800 bg-surface/80 p-5 shadow-xl shadow-black/10">
 				<p className="text-sm uppercase tracking-[0.24em] text-muted">
 					Workout history

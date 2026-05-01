@@ -73,7 +73,7 @@ function Layout() {
 
 			<Outlet />
 
-			<nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-slate-900/80 bg-slate-950/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:hidden">
+			<nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-slate-900/80 bg-slate-950/95 px-3 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:hidden">
 				<div className="mx-auto flex max-w-6xl items-center justify-between gap-2">
 					{navItems.map((item) => (
 						<NavLink
