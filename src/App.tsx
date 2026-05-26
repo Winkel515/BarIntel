@@ -10,7 +10,7 @@ import {
 import type { Workout } from './types';
 import AuthProvider from './AuthProvider';
 import { useAuth } from './auth-context';
-import { createWorkout, listWorkouts } from './data/workouts';
+import { createWorkout, listWorkouts, updateWorkout } from './data/workouts';
 import Analysis from './pages/Analysis';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
@@ -164,6 +164,13 @@ function AppRoutes() {
 		setWorkouts((current) => [savedWorkout, ...current]);
 	};
 
+	const handleUpdateWorkout = async (workout: Workout) => {
+		const savedWorkout = await updateWorkout(workout);
+		setWorkouts((current) =>
+			current.map((item) => (item.id === savedWorkout.id ? savedWorkout : item)),
+		);
+	};
+
 	return (
 		<Routes>
 			<Route path="/login" element={<Login />} />
@@ -187,7 +194,12 @@ function AppRoutes() {
 					<Route path="history" element={<History workouts={workouts} />} />
 					<Route
 						path="history/:id"
-						element={<WorkoutDetail workouts={workouts} />}
+						element={
+							<WorkoutDetail
+								workouts={workouts}
+								onUpdate={handleUpdateWorkout}
+							/>
+						}
 					/>
 					<Route path="*" element={<Navigate to="/" replace />} />
 				</Route>

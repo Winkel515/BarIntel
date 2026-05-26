@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '../auth-context';
 
 export default function Login() {
-	const { user, signInWithGoogle, isConfigured } = useAuth();
+	const { user, signInWithGoogle, isConfigured, authError } = useAuth();
 	const [error, setError] = useState('');
 	const [loading, setLoading] = useState(false);
 
@@ -59,9 +59,9 @@ export default function Login() {
 					</p>
 				) : null}
 
-				{error ? (
+				{authError || error ? (
 					<p className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-						{error}
+						{error || authError}
 					</p>
 				) : null}
 			</section>

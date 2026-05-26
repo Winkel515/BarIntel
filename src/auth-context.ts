@@ -4,6 +4,7 @@ import type { User } from '@supabase/supabase-js';
 export interface AuthContextValue {
 	user: User | null;
 	loading: boolean;
+	authError: string;
 	signInWithGoogle: () => Promise<void>;
 	signOut: () => Promise<void>;
 	isConfigured: boolean;

@@ -8,11 +8,12 @@ const getAuthRedirectUrl = () => window.location.origin;
 export default function AuthProvider({ children }: { children: ReactNode }) {
 	const [user, setUser] = useState<User | null>(null);
 	const [loading, setLoading] = useState(isSupabaseConfigured);
+	const [authError, setAuthError] = useState('');
 
 	useEffect(() => {
 		if (!supabase) return;
 
-		const client = supabase; // ✅ fixes TS null issue
+		const client = supabase;
 		let active = true;
 
 		const initAuth = async () => {
@@ -22,6 +23,12 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
 			if (error) {
 				console.error('Failed to get auth session:', error);
+				await client.auth.signOut({ scope: 'local' });
+				if (!active) return;
+				setAuthError('Your saved login expired. Please sign in again.');
+				setUser(null);
+				setLoading(false);
+				return;
 			}
 
 			setUser(data.session?.user ?? null);
@@ -34,6 +41,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 			data: { subscription },
 		} = client.auth.onAuthStateChange((_event, session) => {
 			setUser(session?.user ?? null);
+			if (session) {
+				setAuthError('');
+			}
 			setLoading(false);
 		});
 
@@ -47,11 +57,13 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 		() => ({
 			user,
 			loading,
+			authError,
 			isConfigured: isSupabaseConfigured,
 
 			signInWithGoogle: async () => {
 				if (!supabase) return;
 
+				setAuthError('');
 				const { error } = await supabase.auth.signInWithOAuth({
 					provider: 'google',
 					options: {
@@ -59,17 +71,24 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 					},
 				});
 
-				if (error) throw error;
+				if (error) {
+					setAuthError(error.message);
+					throw error;
+				}
 			},
 
 			signOut: async () => {
 				if (!supabase) return;
 
 				const { error } = await supabase.auth.signOut();
-				if (error) throw error;
+				if (error) {
+					setAuthError(error.message);
+					throw error;
+				}
+				setAuthError('');
 			},
 		}),
-		[user, loading],
+		[user, loading, authError],
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

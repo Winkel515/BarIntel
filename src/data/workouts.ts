@@ -74,3 +74,25 @@ export async function createWorkout(workout: Workout): Promise<Workout> {
 	if (error) throw error;
 	return toWorkout(data as WorkoutRow);
 }
+
+export async function updateWorkout(workout: Workout): Promise<Workout> {
+	if (!supabase) {
+		throw new Error('Supabase is not configured.');
+	}
+
+	const { data, error } = await supabase
+		.from('workouts')
+		.update({
+			name: workout.name ?? null,
+			date: workout.date,
+			bodyweight: workout.bodyweight ?? null,
+			notes: workout.notes ?? null,
+			exercises: workout.exercises,
+		})
+		.eq('id', workout.id)
+		.select('id,user_id,name,date,bodyweight,notes,exercises')
+		.single();
+
+	if (error) throw error;
+	return toWorkout(data as WorkoutRow);
+}
